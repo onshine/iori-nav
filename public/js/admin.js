@@ -18,6 +18,30 @@ const categoryCurrentPageSpan = document.getElementById('categoryCurrentPage');
 const categoryTotalPagesSpan = document.getElementById('categoryTotalPages');
 const refreshCategoriesBtn = document.getElementById('refreshCategories');
 
+function showMessage(text, type = 'info') {
+  if (!messageDiv) return;
+  messageDiv.innerText = text;
+  messageDiv.style.display = 'block';
+  
+  if (type === 'success') {
+    messageDiv.style.backgroundColor = '#d4edda';
+    messageDiv.style.color = '#155724';
+    messageDiv.style.border = '1px solid #c3e6cb';
+  } else if (type === 'error') {
+    messageDiv.style.backgroundColor = '#f8d7da';
+    messageDiv.style.color = '#721c24';
+    messageDiv.style.border = '1px solid #f5c6cb';
+  } else {
+    messageDiv.style.backgroundColor = '#d1ecf1';
+    messageDiv.style.color = '#0c5460';
+    messageDiv.style.border = '1px solid #bee5eb';
+  }
+
+  setTimeout(() => {
+    messageDiv.style.display = 'none';
+  }, 3000);
+}
+
 var escapeHTML = function (value) {
   if (value === null || value === undefined) {
     return '';
