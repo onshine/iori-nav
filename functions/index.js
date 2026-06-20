@@ -177,24 +177,35 @@ export async function onRequest(context) {
   let allSites = sitesResult.results || [];
   if (sitesResult.error) return new Response(`Failed to fetch sites: ${sitesResult.error.message}`, { status: 500 });
 
+  function resolveCatalogId(catalogValue, options = {}) {
+    const value = String(catalogValue || '').trim();
+    if (!value || value.toLowerCase() === 'all') return null;
+    if (/^\d+$/.test(value)) {
+      const id = Number(value);
+      if (categoryMap.has(id)) return id;
+    }
+    return options.allowName && categoryIdMap.has(value) ? categoryIdMap.get(value) : null;
+  }
+
   // === 6. 确定目标分类 ===
-  let requestedCatalogName = (url.searchParams.get('catalog') || '').trim();
+  const requestedCatalogValue = (url.searchParams.get('catalog') || '').trim();
+  let requestedCatalogId = resolveCatalogId(requestedCatalogValue);
 
   // 共享首页缓存仅基于稳定的默认分类渲染，避免用户的 iori_last_category
   // 影响公共 KV HTML。记住上次分类的恢复逻辑仅在前端执行。
-  if (!requestedCatalogName) {
+  if (!requestedCatalogValue) {
     const defaultCat = (S.home_default_category || '').trim();
-    if (defaultCat && categoryIdMap.has(defaultCat)) requestedCatalogName = defaultCat;
+    requestedCatalogId = resolveCatalogId(defaultCat, { allowName: true });
   }
 
   let targetCategoryIds = [];
   let currentCatalogName = '';
-  const catalogExists = requestedCatalogName && categoryIdMap.has(requestedCatalogName);
+  const catalogExists = requestedCatalogId !== null;
 
   if (catalogExists) {
-    const rootId = categoryIdMap.get(requestedCatalogName);
-    currentCatalogName = requestedCatalogName;
-    targetCategoryIds.push(rootId);
+    const requestedCategory = categoryMap.get(requestedCatalogId);
+    currentCatalogName = requestedCategory.catelog;
+    targetCategoryIds.push(requestedCatalogId);
   }
 
   const sites = targetCategoryIds.length > 0
@@ -492,7 +503,7 @@ export async function onRequest(context) {
     enableFrostedGlass: S.layout_enable_frosted_glass,
     rememberLastCategory: S.home_remember_last_category,
     // 当前 SSR 已渲染的分类（用于前端 Auto-restore 判断是否可跳过重绘）
-    ssrCatalogId: catalogExists ? categoryIdMap.get(requestedCatalogName) : 'all',
+    ssrCatalogId: catalogExists ? requestedCatalogId : 'all',
   }).replace(/</g, '\\u003c');
 
   // --- 一次性替换 </head> ---
